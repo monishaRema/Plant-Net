@@ -1,6 +1,7 @@
 require('dotenv').config()
 const express = require('express')
 const cors = require('cors')
+const stripe = require('stripe')(process.env.STRIP_SECRET_KEY)
 const cookieParser = require('cookie-parser')
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb')
 const jwt = require('jsonwebtoken')
@@ -35,7 +36,7 @@ const verifyToken = async (req, res, next) => {
 }
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
-const client = new MongoClient(process.env.MONGODB_URI, {
+const client = new MongoClient(process.env.MONGO_URI, {
   serverApi: {
     version: ServerApiVersion.v1,
     strict: true,
@@ -43,6 +44,9 @@ const client = new MongoClient(process.env.MONGODB_URI, {
   },
 })
 async function run() {
+
+  const db = client.db('plant');
+  const plantsCollection = db.collection('plants')
   try {
     // Generate jwt token
     app.post('/jwt', async (req, res) => {
@@ -71,7 +75,35 @@ async function run() {
       } catch (err) {
         res.status(500).send(err)
       }
+    }) 
+    
+    // POST: add plant in db
+
+    app.post('/add-plant',async(req,res) => {
+      const plant = req.body;
+      console.log(plant)
+     const result = await plantsCollection.insertOne(plant)
+      res.send(result)
     })
+
+    // GET: get plants api
+
+    app.get('/plants',async(req,res)=>{
+      const result = await plantsCollection.find().toArray();
+      res.send(result)
+    })
+
+    // GET: single plant api
+    app.get('/plant/:id',async(req,res)=>{
+      const id = req.params.id
+      const result = await plantsCollection.findOne({
+        _id: new ObjectId(id)
+      });
+      console.log(result)
+      res.send(result)
+    })
+
+
 
     // Send a ping to confirm a successful connection
     await client.db('admin').command({ ping: 1 })
