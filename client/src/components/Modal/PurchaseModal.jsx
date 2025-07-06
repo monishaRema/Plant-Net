@@ -2,20 +2,18 @@ import { Dialog, DialogPanel, DialogTitle } from "@headlessui/react";
 import useAuth from "../../hooks/useAuth";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
-import { loadStripe } from '@stripe/stripe-js'
-import { Elements } from '@stripe/react-stripe-js'
+import { loadStripe } from "@stripe/stripe-js";
+import { Elements } from "@stripe/react-stripe-js";
 import CheckoutForm from "../Form/CheckoutForm";
 
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PK_KEY);
 
 const PurchaseModal = ({ closeModal, isOpen, plant }) => {
   const { user } = useAuth();
-  const { name, quantity, price,category, _id,seller,image} =
-    plant || {};
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PK_KEY)
-
+  const { name, quantity, price, category, _id, seller, image } = plant || {};
   const [selectedQuantity, setSelectedQuantity] = useState(1);
   const [totalPrice, setTotalPrice] = useState(price);
-   const [orderData, setOrderData] = useState({
+  const [orderData, setOrderData] = useState({
     seller,
     plantId: _id,
     quantity: 1,
@@ -23,11 +21,11 @@ const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PK_KEY)
     plantName: name,
     plantCategory: category,
     plantImage: image,
-  })
+  });
 
   useEffect(() => {
     if (user)
-      setOrderData(prev => {
+      setOrderData((prev) => {
         return {
           ...prev,
           customer: {
@@ -35,27 +33,26 @@ const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PK_KEY)
             email: user?.email,
             image: user?.photoURL,
           },
-        }
-      })
-  }, [user])
-  
+        };
+      });
+  }, [user]);
 
-   const handleQuantity = value => {
-    const totalQuantity = parseInt(value)
+  const handleQuantity = (value) => {
+    const totalQuantity = parseInt(value);
     if (totalQuantity > quantity)
-      return toast.error('You cannot purchase more.')
-    const calculatedPrice = totalQuantity * price
-    setSelectedQuantity(totalQuantity)
-    setTotalPrice(calculatedPrice)
+      return toast.error("You cannot purchase more.");
+    const calculatedPrice = totalQuantity * price;
+    setSelectedQuantity(totalQuantity);
+    setTotalPrice(calculatedPrice);
 
-    setOrderData(prev => {
+    setOrderData((prev) => {
       return {
         ...prev,
         price: calculatedPrice,
         quantity: totalQuantity,
-      }
-    })
-  }
+      };
+    });
+  };
 
   return (
     <Dialog
@@ -104,6 +101,7 @@ const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PK_KEY)
                 onChange={(e) => handleQuantity(e.target.value)}
                 type="number"
                 min={1}
+                max={quantity}
                 className="border px-3 py-1"
               />
             </div>
@@ -117,7 +115,7 @@ const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PK_KEY)
               <p className="text-sm text-gray-500">Total Price: {totalPrice}</p>
             </div>
 
-             {/* Stripe Checkout form */}
+            {/* Stripe Checkout form */}
             <Elements stripe={stripePromise}>
               <CheckoutForm
                 totalPrice={totalPrice}

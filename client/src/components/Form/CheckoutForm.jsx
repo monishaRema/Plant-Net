@@ -1,13 +1,34 @@
-import { CardElement, useElements, useStripe } from '@stripe/react-stripe-js';
-import React from 'react';
-import './chackoutForm.css'
+import { CardElement, useElements, useStripe } from "@stripe/react-stripe-js";
+import React, { useEffect, useState } from "react";
+import "./chackoutForm.css";
+import { ClipLoader } from "react-spinners";
+import useAxiosSecure from "../../hooks/useAxiosSecure";
+import useAuth from "../../hooks/useAuth";
+import toast from "react-hot-toast";
 
-const CheckoutForm = () => {
-    const stripe = useStripe();
+const CheckoutForm = ({ totalPrice, closeModal, orderData }) => {
+  const { user } = useAuth();
+  const stripe = useStripe();
   const elements = useElements();
+  const [cardError, setCardError] = useState(null);
+  const [processing, setProcessing] = useState(false);
+  const [clientSecret, setClientSecret] = useState("");
+  const axiosSecure = useAxiosSecure();
+  useEffect(() => {
+    const getClientSecret = async () => {
+      // server request...
+      const { data } = await axiosSecure.post("/create-payment-intent", {
+        quantity: orderData?.quantity,
+        plantId: orderData?.plantId,
+      });
+      console.log(data);
+      setClientSecret(data?.clientSecret);
+    };
+    getClientSecret();
+  }, [axiosSecure, orderData]);
 
   const handleSubmit = async (event) => {
-    // Block native form submission.
+    setProcessing(true);
     event.preventDefault();
 
     if (!stripe || !elements) {
@@ -26,17 +47,63 @@ const CheckoutForm = () => {
     }
 
     // Use your card Element with other Stripe.js APIs
-    const {error, paymentMethod} = await stripe.createPaymentMethod({
-      type: 'card',
+    const { error, paymentMethod } = await stripe.createPaymentMethod({
+      type: "card",
       card,
     });
 
     if (error) {
-      console.log('[error]', error);
+      console.log("[error]", error);
+      setCardError(error.message);
+      setProcessing(false);
+      return;
     } else {
-      console.log('[PaymentMethod]', paymentMethod);
+      // console.log("[PaymentMethod]", paymentMethod);
+      setCardError(null);
     }
-  };
+
+    //  Taka katar pala
+ const result = await stripe.confirmCardPayment(clientSecret, {
+      payment_method: {
+        card,
+        billing_details: {
+          name: user?.displayName,
+          email: user?.email,
+        },
+      },
+    })
+
+    if (result?.error) {
+      setCardError(result?.error?.message)
+      return
+    }
+    if (result?.paymentIntent?.status === 'succeeded') {
+      // save order data in db
+      orderData.transactionId = result?.paymentIntent?.id
+      try {
+        const { data } = await axiosSecure.post('/order', orderData)
+        console.log(data)
+        if (data?.insertedId) {
+          toast.success('Order Placed Successfully!')
+        }
+        const { data: result } = await axiosSecure.patch(
+          `/quantity-update/${orderData?.plantId}`,
+          { quantityToUpdate: orderData?.quantity, status: 'decrease' }
+        )
+        // fetchPlant()
+        console.log(result)
+      } catch (err) {
+        console.log(err)
+      } finally {
+        setProcessing(false)
+        setCardError(null)
+        closeModal()
+      }
+      // update product quantity in db from plant collection
+    }
+    console.log(result)
+  }
+
 
   return (
     <form onSubmit={handleSubmit}>
@@ -44,21 +111,40 @@ const CheckoutForm = () => {
         options={{
           style: {
             base: {
-              fontSize: '16px',
-              color: '#424770',
-              '::placeholder': {
-                color: '#aab7c4',
+              fontSize: "16px",
+              color: "#424770",
+              "::placeholder": {
+                color: "#aab7c4",
               },
             },
             invalid: {
-              color: '#9e2146',
+              color: "#9e2146",
             },
           },
         }}
       />
-      <button type="submit" disabled={!stripe}>
-        Pay
-      </button>
+
+      {cardError && <p className="text-red-500 my-2">{cardError}</p>}
+      <div className="flex justify-between">
+        <button
+          className="px-3 py-1 bg-green-400 rounded cursor-pointer"
+          type="submit"
+          disabled={!stripe || processing}
+        >
+          {processing ? (
+            <ClipLoader size={24} className="mt-2" />
+          ) : (
+            `Pay ${totalPrice}$`
+          )}
+        </button>
+        <button
+          onClick={closeModal}
+          className="px-3 py-1 bg-red-400 rounded cursor-pointer"
+          type="button"
+        >
+          Cancel
+        </button>
+      </div>
     </form>
   );
 };

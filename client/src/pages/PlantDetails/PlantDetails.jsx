@@ -84,7 +84,7 @@ const PlantDetails = () => {
             <p className='font-bold text-3xl text-gray-500'>Price: {price}</p>
             <div>
                <Button
-                disabled={!user}
+                disabled= {!user || user?.email === seller?.email}
                 onClick={() => setIsOpen(true)}
                 label={user ? 'Purchase' : 'Login to purchase'}
               />
