@@ -24,11 +24,10 @@ export const router = createBrowserRouter([
       {
         path: '/',
         element: <Home />,
-        loader: ()=> fetch(`${import.meta.env.VITE_API_URL}/plants`)
+        loader: ()=> fetch(`${import.meta.env.VITE_API_URL}/plant/all-plant`)
       },
       {
         path: '/plant/:id',
-        loader: ({params})=> fetch(`${import.meta.env.VITE_API_URL}/plant/${params.id}`),
         element: <PlantDetails />,
       },
     ],

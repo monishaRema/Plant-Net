@@ -6,7 +6,7 @@ import useAxiosSecure from "../../hooks/useAxiosSecure";
 import useAuth from "../../hooks/useAuth";
 import toast from "react-hot-toast";
 
-const CheckoutForm = ({ totalPrice, closeModal, orderData }) => {
+const CheckoutForm = ({ totalPrice, closeModal, orderData,refetch }) => {
   const { user } = useAuth();
   const stripe = useStripe();
   const elements = useElements();
@@ -17,7 +17,7 @@ const CheckoutForm = ({ totalPrice, closeModal, orderData }) => {
   useEffect(() => {
     const getClientSecret = async () => {
       // server request...
-      const { data } = await axiosSecure.post("/create-payment-intent", {
+      const { data } = await axiosSecure.post("/payment/create-payment-intent", {
         quantity: orderData?.quantity,
         plantId: orderData?.plantId,
       });
@@ -82,16 +82,16 @@ const CheckoutForm = ({ totalPrice, closeModal, orderData }) => {
       orderData.transactionId = result?.paymentIntent?.id
       try {
         const { data } = await axiosSecure.post('/order', orderData)
-        console.log(data)
+      
         if (data?.insertedId) {
           toast.success('Order Placed Successfully!')
         }
         const { data: result } = await axiosSecure.patch(
-          `/quantity-update/${orderData?.plantId}`,
+          `/plant/update-quantity/${orderData?.plantId}`,
           { quantityToUpdate: orderData?.quantity, status: 'decrease' }
         )
-        // fetchPlant()
-        console.log(result)
+        refetch()
+     
       } catch (err) {
         console.log(err)
       } finally {
@@ -101,7 +101,7 @@ const CheckoutForm = ({ totalPrice, closeModal, orderData }) => {
       }
       // update product quantity in db from plant collection
     }
-    console.log(result)
+   
   }
 
 

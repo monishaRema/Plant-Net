@@ -84,14 +84,14 @@ async function run() {
     //    |||||||||||||||||||    Plant/Product Related APIs
 
     // POST: add plant in db
-    app.post("/add-plant", async (req, res) => {
+    app.post("/plant/add-plant", async (req, res) => {
       const plant = req.body;
       const result = await plantsCollection.insertOne(plant);
       res.send(result);
     });
 
     // GET: get plants api
-    app.get("/plants", async (req, res) => {
+    app.get("/plant/all-plant", async (req, res) => {
       const result = await plantsCollection.find().toArray();
       res.send(result);
     });
@@ -105,12 +105,30 @@ async function run() {
       res.send(result);
     });
 
+    // PATCH : update product quntity 
+    app.patch("/plant/update-quantity/:id", async (req, res) => {
+        const id = req.params.id;
+        const {quantityToUpdate, status} = req.body;
+
+        const filter = {_id: new ObjectId(id)}
+        const updatedDoc = {
+          
+          $inc:{
+            quantity: status == 'decrease' ? -quantityToUpdate  : quantityToUpdate
+          }
+        }
+        const result = await plantsCollection.updateOne(filter,updatedDoc)
+        res.send(result)
+        console.log(result)
+       
+    })
+
 
 
     //    |||||||||||||||||||    Payment Related APIs
 
     // create payment intent for order
-    app.post("/create-payment-intent", async (req, res) => {
+    app.post("/payment/create-payment-intent", async (req, res) => {
       const { plantId, quantity } = req.body;
 
       const plant = await plantsCollection.findOne({

@@ -43,7 +43,7 @@ const AddPlant = () => {
       // console.table(plantData);
 
       const { data } = await axios.post(
-        `${import.meta.env.VITE_API_URL}/add-plant`,
+        `${import.meta.env.VITE_API_URL}/plant/add-plant`,
         plantData
       )
       toast.success('Plant Data added succesfully')
